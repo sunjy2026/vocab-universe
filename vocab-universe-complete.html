@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>词族宇宙 · 每天吃透5个词族</title>
+<style>
+  :root {
+    --bg-body: #0a0a0e; --bg-card: #121218; --bg-elevated: #1a1a24; --bg-hover: #22222e;
+    --border-subtle: rgba(255,255,255,0.05); --border-default: rgba(255,255,255,0.10);
+    --text-primary: #f0f0f5; --text-secondary: rgba(240,240,245,0.60); --text-muted: rgba(240,240,245,0.35); --text-faint: rgba(240,240,245,0.15);
+    --accent-cyan: #5bc0de; --accent-cyan-soft: rgba(91,192,222,0.12);
+    --accent-gold: #e6c35c; --accent-gold-soft: rgba(230,195,92,0.12);
+    --accent-rose: #e07a7a; --accent-rose-soft: rgba(224,122,122,0.12);
+    --accent-jade: #6b9a7a; --accent-jade-soft: rgba(107,154,122,0.12);
+    --accent-slate: #8b9dc3; --accent-slate-soft: rgba(139,157,195,0.12);
+    --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    --font-mono: 'SF Mono', 'Roboto Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: var(--font-display); background: var(--bg-body); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden; height: 100vh; }
+  .app-frame { max-width: 420px; margin: 0 auto; height: 100vh; background: var(--bg-card); position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 0 16px 100px; opacity: 0; pointer-events: none; transform: translateX(24px); transition: opacity 0.25s ease, transform 0.25s ease; scrollbar-width: none; }
+  .screen::-webkit-scrollbar { display: none; }
+  .screen.active { opacity: 1; pointer-events: auto; transform: translateX(0); z-index: 2; }
+  .status-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); position: sticky; top: 0; background: var(--bg-card); z-index: 5; }
+  .nav-title { font-size: 20px; font-weight: 600; margin: 4px 0 16px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .section-title { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-muted); text-transform: uppercase; }
+
+  /* Star Map */
+  .star-map-wrap { position: relative; width: 100%; height: 280px; border-radius: 16px; overflow: hidden; margin-bottom: 16px; background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0e 100%); border: 1px solid var(--border-subtle); }
+  #star-canvas { width: 100%; height: 100%; cursor: grab; }
+  #star-canvas:active { cursor: grabbing; }
+  .star-map-label { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); pointer-events: none; }
+
+  /* Word Card */
+  .word-card { background: var(--bg-elevated); border-radius: 14px; padding: 16px; border: 1px solid var(--border-subtle); margin-bottom: 10px; cursor: pointer; transition: transform 0.15s ease; }
+  .word-card:active { transform: scale(0.98); }
+  .word-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .word-badge { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+  .word-info { flex: 1; }
+  .word-name { font-size: 18px; font-weight: 600; }
+  .word-pron { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+  .word-pos { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px; }
+  .word-arrow { font-size: 14px; color: var(--text-muted); transition: transform 0.2s; }
+  .word-card.expanded .word-arrow { transform: rotate(180deg); }
+  .word-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+  .word-card.expanded .word-body { max-height: 600px; }
+  .sense-item { padding: 10px 0; border-bottom: 1px solid var(--border-subtle); }
+  .sense-item:last-child { border-bottom: 0; }
+  .sense-label { font-size: 11px; color: var(--accent-cyan); font-family: var(--font-mono); margin-bottom: 4px; }
+  .sense-meaning { font-size: 14px; color: var(--text-primary); }
+  .sense-note { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .sense-coll { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .coll-tag { font-size: 10px; color: var(--text-secondary); background: var(--accent-cyan-soft); padding: 3px 8px; border-radius: 6px; }
+  .pattern-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
+  .pattern-title { font-size: 11px; color: var(--accent-gold); font-family: var(--font-mono); margin-bottom: 6px; }
+  .pattern-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pattern-tag { font-size: 10px; color: var(--text-secondary); background: var(--accent-gold-soft); padding: 3px 8px; border-radius: 6px; }
+  .family-note { margin-top: 12px; padding: 10px; background: var(--accent-slate-soft); border-radius: 10px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .family-note em { color: var(--accent-slate); font-style: normal; font-weight: 600; }
+
+  /* Family Tree (vertical) */
+  .tree-root { text-align: center; margin-bottom: 20px; }
+  .tree-root-box { display: inline-block; background: var(--accent-cyan-soft); border: 1px solid var(--accent-cyan); border-radius: 12px; padding: 10px 20px; font-size: 16px; font-weight: 600; color: var(--accent-cyan); }
+  .tree-root-meaning { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .tree-branches { display: grid; gap: 10px; }
+  .tree-branch { background: var(--bg-elevated); border-radius: 12px; padding: 14px; border: 1px solid var(--border-subtle); }
+  .tree-branch-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .tree-branch-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .tree-branch-name { font-size: 15px; font-weight: 600; }
+  .tree-branch-meaning { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .tree-branch-deriv { display: flex; flex-wrap: wrap; gap: 6px; }
+  .deriv-tag { font-size: 10px; color: var(--text-secondary); background: var(--bg-hover); padding: 2px 8px; border-radius: 5px; }
+
+  /* Scene Slider */
+  .scene-slider { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px; margin-bottom: 16px; scrollbar-width: none; }
+  .scene-slider::-webkit-scrollbar { display: none; }
+  .scene-card { flex: 0 0 260px; scroll-snap-align: start; background: var(--bg-elevated); border-radius: 14px; padding: 16px; border: 1px solid var(--border-subtle); }
+  .scene-title { font-size: 14px; font-weight: 600; color: var(--accent-gold); margin-bottom: 8px; }
+  .scene-sentence { font-size: 13px; color: var(--text-primary); line-height: 1.6; margin-bottom: 8px; }
+  .scene-sentence em { color: var(--accent-cyan); font-style: normal; font-weight: 500; }
+  .scene-translation { font-size: 11px; color: var(--text-muted); }
+  .scene-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .scene-tag { font-size: 10px; color: var(--text-secondary); background: var(--accent-gold-soft); padding: 2px 8px; border-radius: 5px; }
+
+  /* Compare Cards */
+  .compare-pair { background: var(--bg-elevated); border-radius: 14px; padding: 16px; border: 1px solid var(--border-subtle); margin-bottom: 12px; }
+  .compare-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .compare-word { font-size: 16px; font-weight: 600; }
+  .compare-vs { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+  .compare-row { display: flex; gap: 10px; }
+  .compare-col { flex: 1; background: var(--bg-hover); border-radius: 10px; padding: 10px; }
+  .compare-col-title { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 6px; }
+  .compare-col-text { font-size: 12px; color: var(--text-primary); line-height: 1.5; }
+  .compare-tip { margin-top: 10px; padding: 8px; background: var(--accent-gold-soft); border-radius: 8px; font-size: 11px; color: var(--accent-gold); }
+
+  /* Profile / Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+  .stats-cell { background: var(--bg-elevated); border-radius: 12px; padding: 14px 8px; text-align: center; border: 1px solid var(--border-subtle); }
+  .stats-num { font-size: 22px; font-weight: 700; color: var(--accent-cyan); }
+  .stats-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono); }
+  .streak-bar { background: var(--bg-elevated); border-radius: 12px; padding: 14px; border: 1px solid var(--border-subtle); margin-bottom: 16px; }
+  .streak-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .streak-days { display: flex; gap: 6px; justify-content: center; }
+  .streak-day { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-family: var(--font-mono); }
+  .streak-day.done { background: var(--accent-cyan); color: #fff; }
+  .streak-day.missed { background: var(--accent-rose-soft); color: var(--accent-rose); }
+  .streak-day.future { background: var(--bg-hover); color: var(--text-muted); }
+  .progress-section { margin-bottom: 16px; }
+  .progress-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+  .progress-track { height: 8px; background: var(--bg-hover); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .progress-text { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-align: right; font-family: var(--font-mono); }
+
+  /* Share */
+  .share-btn { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 16px 0; cursor: pointer; }
+  .share-btn-text { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+  .share-card-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .share-card-overlay.show { opacity: 1; pointer-events: auto; }
+  .share-card-wrap { position: relative; width: 320px; border-radius: 20px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-subtle); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .share-card { padding: 32px 24px; text-align: center; }
+  .share-card-slogan { font-size: 20px; font-weight: 600; color: var(--text-primary); margin-bottom: 20px; }
+  .share-card-slogan em { color: var(--accent-cyan); font-style: normal; }
+  .share-card-word { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .share-card-meaning { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+  .share-card-watermark { font-size: 11px; color: var(--text-faint); font-family: var(--font-mono); }
+  .share-close-btn { position: absolute; top: -36px; right: 0; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; font-size: 16px; }
+  .share-hint { position: absolute; bottom: -32px; left: 50%; transform: translateX(-50%); font-size: 12px; color: rgba(255,255,255,0.5); white-space: nowrap; }
+
+  /* Toast */
+  .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); background: rgba(30,30,40,0.95); color: var(--text-primary); padding: 12px 20px; border-radius: 12px; font-size: 14px; opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 50; border: 1px solid var(--border-subtle); }
+  .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  /* Bottom Nav */
+  .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 56px; background: rgba(18,18,24,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-around; align-items: center; z-index: 10; max-width: 420px; margin: 0 auto; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; color: var(--text-muted); transition: color 0.2s; font-size: 10px; }
+  .nav-item.active { color: var(--accent-cyan); }
+  .nav-icon { font-size: 18px; line-height: 1; }
+
+  .entry-list { display: grid; gap: 8px; }
+  .entry-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--bg-elevated); border-radius: 12px; border: 1px solid var(--border-subtle); cursor: pointer; transition: transform 0.15s; }
+  .entry-row:active { transform: scale(0.98); }
+  .entry-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .entry-name { font-size: 15px; font-weight: 500; flex: 1; }
+  .entry-count { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<div class="app-frame" id="app-frame">
+
+  <!-- Screen: Star Map -->
+  <div class="screen active" id="screen-star">
+    <div class="status-bar"><span>词族宇宙</span><span>5 词族</span></div>
+    <div class="nav-title">每天吃透 <em style="color:var(--accent-cyan);font-style:normal;">5</em> 个词族</div>
+    <div class="star-map-wrap">
+      <canvas id="star-canvas"></canvas>
+      <div class="star-map-label">拖动旋转 · 点击星球</div>
+    </div>
+    <div class="section-head"><span class="section-title">今日词族</span></div>
+    <div class="entry-list" id="entry-list"></div>
+    <div class="share-btn" onclick="openShare('home')"><span style="font-size:14px;color:var(--text-muted);">↗</span><span class="share-btn-text">生成今日学习卡片</span></div>
+    <div style="height:60px"></div>
+  </div>
+
+  <!-- Screen: Family Tree -->
+  <div class="screen" id="screen-family">
+    <div class="status-bar"><span>词族网络</span><span>dict 词族</span></div>
+    <div class="nav-title">词族树 · 纵向折叠</div>
+    <div class="tree-root">
+      <div class="tree-root-box">dict</div>
+      <div class="tree-root-meaning">= say / speak 说</div>
+    </div>
+    <div class="tree-branches" id="tree-branches"></div>
+    <div class="share-btn" onclick="openShare('family')"><span style="font-size:14px;color:var(--text-muted);">↗</span><span class="share-btn-text">生成词族树卡片</span></div>
+    <div style="height:60px"></div>
+  </div>
+
+  <!-- Screen: Scene -->
+  <div class="screen" id="screen-scene">
+    <div class="status-bar"><span>场景词群</span><span>横向滑动</span></div>
+    <div class="nav-title">词族在真实场景里</div>
+    <div class="scene-slider" id="scene-slider"></div>
+    <div class="share-btn" onclick="openShare('scene')"><span style="font-size:14px;color:var(--text-muted);">↗</span><span class="share-btn-text">生成场景卡片</span></div>
+    <div style="height:60px"></div>
+  </div>
+
+  <!-- Screen: Compare -->
+  <div class="screen" id="screen-compare">
+    <div class="status-bar"><span>易混辨析</span><span>对比卡片</span></div>
+    <div class="nav-title">这些词不一样</div>
+    <div id="compare-list"></div>
+    <div class="share-btn" onclick="openShare('compare')"><span style="font-size:14px;color:var(--text-muted);">↗</span><span class="share-btn-text">生成辨析卡片</span></div>
+    <div style="height:60px"></div>
+  </div>
+
+  <!-- Screen: Profile -->
+  <div class="screen" id="screen-profile">
+    <div class="status-bar"><span>我的</span><span>学习数据</span></div>
+    <div class="nav-title">学习进度</div>
+    <div class="stats-grid">
+      <div class="stats-cell"><div class="stats-num">5</div><div class="stats-label">今日词族</div></div>
+      <div class="stats-cell"><div class="stats-num">23</div><div class="stats-label">累计词族</div></div>
+      <div class="stats-cell"><div class="stats-num">7</div><div class="stats-label">连续天数</div></div>
+    </div>
+    <div class="streak-bar">
+      <div class="streak-title">连续打卡 <span style="color:var(--accent-cyan);">7</span> 天</div>
+      <div class="streak-days">
+        <div class="streak-day done">M</div><div class="streak-day done">T</div><div class="streak-day done">W</div><div class="streak-day done">T</div><div class="streak-day done">F</div><div class="streak-day missed">S</div><div class="streak-day future">S</div>
+      </div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-title">dict 词族掌握度</div>
+      <div class="progress-track"><div class="progress-fill" style="width:40%;background:var(--accent-cyan);"></div></div>
+      <div class="progress-text">2 / 5 词族已吃透</div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-title">六级高频 1000 词总进度</div>
+      <div class="progress-track"><div class="progress-fill" style="width:12%;background:var(--accent-gold);"></div></div>
+      <div class="progress-text">120 / 1000 词</div>
+    </div>
+    <div class="share-btn" onclick="openShare('profile')"><span style="font-size:14px;color:var(--text-muted);">↗</span><span class="share-btn-text">生成学习报告</span></div>
+    <div style="height:60px"></div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="nav-item active" onclick="goTo('star')"><div class="nav-icon">✦</div><span>星图</span></div>
+    <div class="nav-item" onclick="goTo('family')"><div class="nav-icon">❖</div><span>词族</span></div>
+    <div class="nav-item" onclick="goTo('scene')"><div class="nav-icon">◈</div><span>场景</span></div>
+    <div class="nav-item" onclick="goTo('compare')"><div class="nav-icon">◇</div><span>辨析</span></div>
+    <div class="nav-item" onclick="goTo('profile')"><div class="nav-icon">◉</div><span>我的</span></div>
+  </div>
+</div>
+
+<!-- Share Overlays -->
+<div class="share-card-overlay" id="share-overlay" onclick="closeShare(event)">
+  <div class="share-card-wrap" onclick="event.stopPropagation()">
+    <div class="share-close-btn" onclick="closeShare()">×</div>
+    <div class="share-card" id="share-card-content"></div>
+  </div>
+  <div class="share-hint">长按卡片保存图片</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  var words = {
+    dictate: {pos:['v','n'], pron:'/dɪkˈteɪt/', color:'#5bc0de', senses:[
+      {id:'v1', label:'v. ①', meaning:'口述；说给别人写下来', note:'常见结构：dictate sth to sb', coll:['dictate a letter','dictate sth to sb']},
+      {id:'v2', label:'v. ②', meaning:'命令；强行规定；指使', note:'强调一方把规则强加给另一方', coll:['dictate terms','dictate how/what...']},
+      {id:'v3', label:'v. ③', meaning:'支配；决定；影响事情如何发生', note:'主语常为 circumstances / policy', coll:['be dictated by','policy dictates']},
+      {id:'n1', label:'n.', meaning:'命令；规定；原则', note:'多用于较正式表达', coll:['follow the dictates of']}
+    ], patterns:['dictate sth to sb','dictate terms','be dictated by sth'], family:'dict = say/speak。dictate 从“说出”发展出“口述”，再引申为“把话变成命令/规则”。'},
+    predict: {pos:['v'], pron:'/prɪˈdɪkt/', color:'#e6c35c', senses:[
+      {id:'v1', label:'v.', meaning:'预测；预言；预告', note:'根据已有信息判断未来；比 guess 更有依据', coll:['predict the outcome','predict that...','predict future trends']}
+    ], patterns:['predict sth','predict that...','be predicted to do sth'], family:'pre- = before，dict = say。predict 本义是“提前说出”，即预测。'},
+    contradict: {pos:['v'], pron:'/ˌkɒntrəˈdɪkt/', color:'#e07a7a', senses:[
+      {id:'v1', label:'v. ①', meaning:'反驳；驳斥；否认对方说法', note:'直接说别人错，或提出相反说法', coll:['contradict sb','contradict yourself']},
+      {id:'v2', label:'v. ②', meaning:'相矛盾；相抵触', note:'两个事实/陈述互相冲突', coll:['contradict each other','contradict the evidence']}
+    ], patterns:['contradict sb/sth','contradict yourself','two statements contradict each other'], family:'contra- = opposite，dict = say。contradict 是“说相反的话”，所以是反驳/矛盾。'},
+    verdict: {pos:['n'], pron:'/ˈvɜːdɪkt/', color:'#8b9dc3', senses:[
+      {id:'n1', label:'n. ①', meaning:'裁定；裁决；判决', note:'法律语境，陪审团或法庭的正式结论', coll:['reach a verdict','a verdict of guilty']},
+      {id:'n2', label:'n. ②', meaning:'结论；意见；评价', note:'非法律语境，经过试用/思考后的判断', coll:['the final verdict','give your verdict']}
+    ], patterns:['reach a verdict','a verdict of guilty','the verdict on sth'], family:'ver- 与 true/真实相关，dict = say。verdict 可理解为“说出真实判断”，核心是正式结论。'},
+    addict: {pos:['n'], pron:'/ˈædɪkt/', color:'#6b9a7a', senses:[
+      {id:'n1', label:'n. ①', meaning:'成瘾者；瘾君子', note:'通常指无法停止使用有害物质的人', coll:['drug addict','heroin addict','nicotine addict']},
+      {id:'n2', label:'n. ②', meaning:'入迷者；沉迷某事的人', note:'非正式语境，对活动/爱好投入大量时间', coll:['video game addict','TV addict']}
+    ], patterns:['a drug/heroin/nicotine addict','a video game/TV addict','be addicted to sth'], family:'核心语义是“被某物绑定，无法脱离”。addict / addiction / addicted 同词族。'}
+  };
+  var wordKeys = Object.keys(words);
+
+  // Star Map
+  var canvas = document.getElementById('star-canvas');
+  var ctx = canvas.getContext('2d');
+  var DPR = window.devicePixelRatio || 1, W, H, CX, CY;
+  function resizeCanvas() { var rect = canvas.parentElement.getBoundingClientRect(); W = rect.width; H = rect.height; canvas.width = W*DPR; canvas.height = H*DPR; canvas.style.width = W+'px'; canvas.style.height = H+'px'; ctx.setTransform(DPR,0,0,DPR,0,0); CX = W/2; CY = H/2; }
+  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+  var stars = []; for (var i=0; i<120; i++) stars.push({x:Math.random()*W, y:Math.random()*H, z:Math.random()*0.8+0.2, speed:Math.random()*0.3+0.1, size:Math.random()*1.5+0.5, alpha:Math.random()*0.6+0.2});
+  var planets = wordKeys.map(function(w,i){ var angle = (i/wordKeys.length)*Math.PI*2; var radius = Math.min(W,H)*0.28; return {word:w, angle:angle, radius:radius, size:18, color:words[w].color, hover:false}; });
+  var rotationOffset = 0, targetRotation = 0, isDragging = false, lastX = 0;
+  function drawStarMap() {
+    ctx.clearRect(0,0,W,H);
+    var grad = ctx.createRadialGradient(CX,CY,0,CX,CY,Math.max(W,H)*0.7);
+    grad.addColorStop(0,'#1a1a2e'); grad.addColorStop(1,'#0a0a0e');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+    stars.forEach(function(s){ s.y -= s.speed; if(s.y<0) s.y=H; ctx.globalAlpha = s.alpha*s.z; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x,s.y,s.size*s.z,0,Math.PI*2); ctx.fill(); });
+    ctx.globalAlpha = 1;
+    var sunPulse = 1 + Math.sin(Date.now()/800)*0.05;
+    ctx.shadowBlur = 30; ctx.shadowColor = 'rgba(91,192,222,0.4)';
+    ctx.fillStyle = '#5bc0de'; ctx.beginPath(); ctx.arc(CX,CY,24*sunPulse,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('dict', CX, CY);
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(CX,CY,planets[0].radius,0,Math.PI*2); ctx.stroke();
+    planets.forEach(function(p){
+      var px = CX + Math.cos(p.angle+rotationOffset)*p.radius;
+      var py = CY + Math.sin(p.angle+rotationOffset)*p.radius*0.6;
+      p.px = px; p.py = py;
+      var scale = 0.7 + (py/H)*0.6;
+      var r = p.size * scale;
+      ctx.shadowBlur = p.hover ? 25 : 15; ctx.shadowColor = p.color+'66';
+      ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fff'; ctx.font = 'bold '+(10*scale)+'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.word, px, py);
+    });
+    rotationOffset += (targetRotation - rotationOffset)*0.05;
+    requestAnimationFrame(drawStarMap);
+  }
+  drawStarMap();
+  canvas.addEventListener('mousedown', function(e){ isDragging = true; lastX = e.clientX; });
+  canvas.addEventListener('mousemove', function(e){ var rect = canvas.getBoundingClientRect(); var mx = e.clientX-rect.left, my = e.clientY-rect.top; planets.forEach(function(p){ var dx = mx-p.px, dy = my-p.py; p.hover = Math.sqrt(dx*dx+dy*dy) < p.size+5; }); canvas.style.cursor = planets.some(function(p){return p.hover;}) ? 'pointer' : (isDragging ? 'grabbing' : 'grab'); if(isDragging){ targetRotation += (e.clientX-lastX)*0.005; lastX = e.clientX; } });
+  canvas.addEventListener('mouseup', function(){ isDragging = false; });
+  canvas.addEventListener('mouseleave', function(){ isDragging = false; });
+  canvas.addEventListener('click', function(e){ var rect = canvas.getBoundingClientRect(); var mx = e.clientX-rect.left, my = e.clientY-rect.top; planets.forEach(function(p){ var dx = mx-p.px, dy = my-p.py; if(Math.sqrt(dx*dx+dy*dy) < p.size+5){ goTo('family'); expandWord(p.word); } }); });
+  canvas.addEventListener('touchstart', function(e){ if(e.touches.length===1){ isDragging = true; lastX = e.touches[0].clientX; } });
+  canvas.addEventListener('touchmove', function(e){ if(isDragging && e.touches.length===1){ targetRotation += (e.touches[0].clientX-lastX)*0.005; lastX = e.touches[0].clientX; } });
+  canvas.addEventListener('touchend', function(){ isDragging = false; });
+
+  // Navigation
+  function goTo(screen) {
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById('screen-'+screen).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(function(n, i){ n.classList.toggle('active', ['star','family','scene','compare','profile'][i] === screen); });
+  }
+
+  // Home entry list
+  function renderHome() {
+    document.getElementById('entry-list').innerHTML = wordKeys.map(function(w){
+      var g = words[w];
+      return '<div class="entry-row" onclick="goTo(\'family\'); expandWord(\''+w+'\');">'+
+        '<div class="entry-dot" style="background:'+g.color+'"></div>'+
+        '<div class="entry-name">'+w+'</div>'+
+        '<div class="entry-count">'+g.senses.length+' 义项</div>'+
+      '</div>';
+    }).join('');
+  }
+  renderHome();
+
+  // Family Tree
+  function renderFamily() {
+    var container = document.getElementById('tree-branches');
+    container.innerHTML = wordKeys.map(function(w){
+      var g = words[w];
+      return '<div class="tree-branch" id="branch-'+w+'" onclick="toggleBranch(\''+w+'\')">'+
+        '<div class="tree-branch-header">'+
+          '<div class="tree-branch-dot" style="background:'+g.color+'"></div>'+
+          '<div class="tree-branch-name" style="color:'+g.color+'">'+w+'</div>'+
+          '<div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">'+g.pron+'</div>'+
+        '</div>'+
+        '<div class="tree-branch-meaning">'+g.senses[0].meaning+'</div>'+
+        '<div class="tree-branch-deriv" id="deriv-'+w+'" style="display:none;">'+
+          g.senses.map(function(s){ return '<span class="deriv-tag">'+s.label+' '+s.meaning+'</span>'; }).join('') +
+          '<span class="deriv-tag" style="background:var(--accent-slate-soft);color:var(--accent-slate);">'+g.family+'</span>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+  function toggleBranch(w) {
+    var el = document.getElementById('deriv-'+w);
+    el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+  }
+  function expandWord(w) {
+    setTimeout(function(){ var el = document.getElementById('deriv-'+w); if(el) el.style.display = 'flex'; }, 100);
+  }
+  renderFamily();
+
+  // Scene Slider
+  var scenes = [
+    {title:'职场沟通', sentence:'The manager <em>dictated</em> a letter to his secretary.', translation:'经理向秘书口授信稿。', tags:['dictate','口述']},
+    {title:'预测未来', sentence:'Nobody could <em>predict</em> the outcome of the election.', translation:'谁也无法预料选举结果。', tags:['predict','预言']},
+    {title:'学术辩论', sentence:'The evidence <em>contradicts</em> the previous theory.', translation:'证据与之前的理论相矛盾。', tags:['contradict','反驳']},
+    {title:'法庭审判', sentence:'The jury reached a <em>verdict</em> of not guilty.', translation:'陪审团作出了无罪裁决。', tags:['verdict','裁定']},
+    {title:'沉迷游戏', sentence:'He is a self-confessed video game <em>addict</em>.', translation:'他自认是个电子游戏迷。', tags:['addict','入迷']},
+    {title:'发号施令', sentence:'They are in no position to <em>dictate</em> terms.', translation:'他们没有资格发号施令。', tags:['dictate','命令']},
+    {title:'天气预报', sentence:'The forecast <em>predicts</em> heavy rain tomorrow.', translation:'预报说明天有大雨。', tags:['predict','预报']},
+    {title:'自相矛盾', sentence:'You\'ve just <em>contradicted</em> yourself.', translation:'你恰好与你刚才说的自相矛盾。', tags:['contradict','矛盾']}
+  ];
+  function renderScene() {
+    document.getElementById('scene-slider').innerHTML = scenes.map(function(s){
+      return '<div class="scene-card">'+
+        '<div class="scene-title">'+s.title+'</div>'+
+        '<div class="scene-sentence">'+s.sentence+'</div>'+
+        '<div class="scene-translation">'+s.translation+'</div>'+
+        '<div class="scene-tags">'+s.tags.map(function(t){return '<span class="scene-tag">'+t+'</span>';}).join('')+'</div>'+
+      '</div>';
+    }).join('');
+  }
+  renderScene();
+
+  // Compare
+  var compares = [
+    {a:'dictate', b:'predict', aMeaning:'命令/口述：一方把规则或文字强加给另一方', bMeaning:'预测：根据信息提前说出未来', tip:'dictate 是“控制式地说”，predict 是“提前地说”'},
+    {a:'contradict', b:'verdict', aMeaning:'反驳/矛盾：说相反的话，或事实互相冲突', bMeaning:'裁决/结论：经过检验后给出的正式判断', tip:'contradict 是动作（反驳），verdict 是结果（结论）'},
+    {a:'dictate', b:'addict', aMeaning:'dictate = 命令/支配；词根 dict = say', bMeaning:'addict = 成瘾者/入迷者；ad- = toward', tip:'这两个词根看起来相似但来源不同，不要混淆'}
+  ];
+  function renderCompare() {
+    document.getElementById('compare-list').innerHTML = compares.map(function(c){
+      var ca = words[c.a].color, cb = words[c.b].color;
+      return '<div class="compare-pair">'+
+        '<div class="compare-header">'+
+          '<div class="compare-word" style="color:'+ca+'">'+c.a+'</div>'+
+          '<div class="compare-vs">vs</div>'+
+          '<div class="compare-word" style="color:'+cb+'">'+c.b+'</div>'+
+        '</div>'+
+        '<div class="compare-row">'+
+          '<div class="compare-col">'+
+            '<div class="compare-col-title">'+c.a+'</div>'+
+            '<div class="compare-col-text">'+c.aMeaning+'</div>'+
+          '</div>'+
+          '<div class="compare-col">'+
+            '<div class="compare-col-title">'+c.b+'</div>'+
+            '<div class="compare-col-text">'+c.bMeaning+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="compare-tip">💡 '+c.tip+'</div>'+
+      '</div>';
+    }).join('');
+  }
+  renderCompare();
+
+  // Share
+  function openShare(type) {
+    var content = document.getElementById('share-card-content');
+    if (type === 'home') {
+      content.innerHTML = '<div class="share-card-slogan">每天吃透 <em>5</em> 个词族</div><div class="share-card-meaning">今日词族：dictate · predict · contradict · verdict · addict</div><div class="share-card-watermark">词族宇宙 · 2026</div>';
+    } else if (type === 'family') {
+      content.innerHTML = '<div class="share-card-slogan">dict 词族网络</div><div class="share-card-meaning">dict = say/speak<br>dictate · predict · contradict · verdict · addict</div><div class="share-card-watermark">词族宇宙</div>';
+    } else if (type === 'scene') {
+      content.innerHTML = '<div class="share-card-slogan">场景中学习词族</div><div class="share-card-meaning">"Nobody could predict the outcome."<br>谁也无法预料结果。</div><div class="share-card-watermark">词族宇宙 · 场景词群</div>';
+    } else if (type === 'compare') {
+      content.innerHTML = '<div class="share-card-slogan">易混辨析</div><div class="share-card-meaning">dictate 是控制式地说<br>predict 是提前地说</div><div class="share-card-watermark">词族宇宙 · 辨析</div>';
+    } else if (type === 'profile') {
+      content.innerHTML = '<div class="share-card-slogan">学习报告</div><div class="share-card-meaning">连续打卡 7 天<br>已掌握 23 个词族</div><div class="share-card-watermark">词族宇宙 · 我的进度</div>';
+    }
+    document.getElementById('share-overlay').classList.add('show');
+  }
+  function closeShare(e) { if (e && e.target !== document.getElementById('share-overlay')) return; document.getElementById('share-overlay').classList.remove('show'); }
+  function showToast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');}, 2000); }
+</script>
+</body>
+</html>
