@@ -1,5 +1,5 @@
 # vocab-universe
-# 🌟 vocab-universe – 5 词族沉浸式单词学习（进化中）
+# 🌟 vocab-universe – 词族沉浸式单词学习（进化中）
 
 > 不是背单词，是看见单词之间的星系联系。
 
